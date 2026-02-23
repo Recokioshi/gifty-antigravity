@@ -1,66 +1,113 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { 
+  Box, 
+  Typography, 
+  Button, 
+  TextField, 
+  Paper, 
+  CircularProgress 
+} from '@mui/material';
 
 export default function Home() {
+  const router = useRouter();
+  const [listName, setListName] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleCreateList = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!listName.trim() || !password.trim()) {
+      setError('Please provide a name and password for your list.');
+      return;
+    }
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await fetch('/api/list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: listName, password }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create list');
+      }
+
+      const data = await response.json();
+      router.push(`/list/${data.id}`);
+    } catch (err: any) {
+      console.error(err);
+      setError('Could not create your list. Please try again.');
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <Box sx={{ maxWidth: 500, mx: 'auto', mt: 4 }}>
+      <Box sx={{ textAlign: 'center', mb: 6 }}>
+        <Typography variant="h3" component="h2" gutterBottom>
+          Create a Wish List
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          A simple, shared space for birthdays, holidays, and celebrations.
+        </Typography>
+      </Box>
+
+      <Paper 
+        elevation={0}
+        component="form" 
+        onSubmit={handleCreateList}
+        sx={{ 
+          p: 4, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: 3,
+          backgroundColor: '#FFFFFF',
+        }}
+      >
+        {error && (
+          <Typography color="error.main" variant="body2" textAlign="center">
+            {error}
+          </Typography>
+        )}
+        
+        <TextField
+          label="For who or what is this list?"
+          placeholder="e.g. Mom's 50th Birthday"
+          variant="outlined"
+          value={listName}
+          onChange={(e) => setListName(e.target.value)}
+          fullWidth
+          required
         />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+
+        <TextField
+          label="Secret Password"
+          helperText="You'll need this to edit the list later."
+          variant="outlined"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          fullWidth
+          required
+        />
+
+        <Button 
+          type="submit" 
+          variant="contained" 
+          color="primary" 
+          size="large"
+          disabled={loading}
+          sx={{ mt: 2 }}
+        >
+          {loading ? <CircularProgress size={24} color="inherit" /> : 'Create List'}
+        </Button>
+      </Paper>
+    </Box>
   );
 }
