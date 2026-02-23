@@ -1,6 +1,38 @@
 import { NextResponse } from 'next/server';
-import { updateGiftStatus, deleteGift, getListById, GiftStatus } from '@/lib/db';
+import { updateGiftStatus, updateGiftDetails, deleteGift, getListById, GiftStatus } from '@/lib/db';
 import crypto from 'crypto';
+
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string, giftId: string }> }
+) {
+  try {
+    const { id, giftId } = await params;
+    const { name, description, url, password } = await request.json();
+
+    if (!name) {
+      return NextResponse.json({ error: 'Gift name is required' }, { status: 400 });
+    }
+
+    // Authenticate owner
+    const list = await getListById(id);
+    if (!list) {
+      return NextResponse.json({ error: 'List not found' }, { status: 404 });
+    }
+
+    const providedHash = crypto.createHash('sha256').update(password || '').digest('hex');
+    if (providedHash !== list.password_hash) {
+      return NextResponse.json({ error: 'Unauthorized to edit' }, { status: 401 });
+    }
+
+    await updateGiftDetails(giftId, id, name, description, url);
+    return NextResponse.json({ success: true }, { status: 200 });
+
+  } catch (error) {
+    console.error('Error updating gift details:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
 
 export async function PATCH(
   request: Request,

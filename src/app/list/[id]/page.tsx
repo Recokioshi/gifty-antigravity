@@ -3,9 +3,10 @@
 import { useEffect, useState, useCallback, use } from 'react';
 import { 
   Box, Typography, Button, Dialog, DialogTitle, DialogContent, 
-  DialogActions, TextField, CircularProgress, IconButton 
+  DialogActions, TextField, CircularProgress, IconButton, Divider 
 } from '@mui/material';
 import { Gift as GiftIcon, Lock, Unlock, Plus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { Gift, GiftList } from '@/lib/db';
 import GiftRow from '@/app/components/GiftRow';
 
@@ -99,10 +100,16 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
 
     try {
       if (editingGift) {
-        // We didn't build a full PUT endpoint for updating fields yet, normally we'd call a PUT here.
-        // For scope of this task, we will just support deleting and re-adding if they want to edit major text,
-        // or you can add a PUT endpoint later. I'll mock throwing an alert if they try to edit text for now.
-        alert("Editing gift details coming soon. Try deleting and recreating for now!");
+        await fetch(`/api/list/${id}/gifts/${editingGift.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            name: newGiftName, 
+            description: newGiftDesc, 
+            url: newGiftUrl,
+            password: ownerPassword 
+          }),
+        });
       } else {
         await fetch(`/api/list/${id}/gifts`, {
           method: 'POST',
@@ -179,16 +186,57 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
         </Box>
       ) : (
         <Box>
-          {gifts.map(gift => (
-            <GiftRow 
-              key={gift.id} 
-              gift={gift} 
-              isOwner={isOwner}
-              onStatusChange={handleStatusChange}
-              onDelete={handleDeleteGift}
-              // onEdit={(g) => { setEditingGift(g); setNewGiftName(g.name); setNewGiftDesc(g.description||''); setNewGiftUrl(g.url||''); setShowGiftModal(true); }}
-            />
-          ))}
+          <AnimatePresence mode="popLayout">
+            {gifts.filter(g => g.status !== 'bought').map(gift => (
+              <motion.div
+                key={gift.id}
+                layout
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                transition={{ type: "spring", bounce: 0.3, duration: 0.6 }}
+              >
+                <GiftRow 
+                  gift={gift} 
+                  isOwner={isOwner}
+                  onStatusChange={handleStatusChange}
+                  onDelete={handleDeleteGift}
+                  onEdit={(g) => { setEditingGift(g); setNewGiftName(g.name); setNewGiftDesc(g.description||''); setNewGiftUrl(g.url||''); setShowGiftModal(true); }}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+
+          {gifts.some(g => g.status === 'bought') && (
+            <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+              <Divider sx={{ my: 4, '&::before, &::after': { borderColor: 'rgba(74, 59, 50, 0.1)' } }}>
+                <Typography variant="body2" color="text.secondary" sx={{ px: 2, fontWeight: 600 }}>
+                  Already Bought
+                </Typography>
+              </Divider>
+
+              <AnimatePresence mode="popLayout">
+                {gifts.filter(g => g.status === 'bought').map(gift => (
+                  <motion.div
+                    key={gift.id}
+                    layout 
+                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ type: "spring", bounce: 0.3, duration: 0.6 }}
+                  >
+                    <GiftRow 
+                      gift={gift} 
+                      isOwner={isOwner}
+                      onStatusChange={handleStatusChange}
+                      onDelete={handleDeleteGift}
+                      onEdit={(g) => { setEditingGift(g); setNewGiftName(g.name); setNewGiftDesc(g.description||''); setNewGiftUrl(g.url||''); setShowGiftModal(true); }}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          )}
         </Box>
       )}
 

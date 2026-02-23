@@ -96,6 +96,14 @@ export async function updateGiftStatus(giftId: string, listId: string, newStatus
   `;
 }
 
+export async function updateGiftDetails(giftId: string, listId: string, name: string, description?: string, url?: string): Promise<void> {
+  await sql`
+    UPDATE gifts
+    SET name = ${name}, description = ${description || null}, url = ${url || null}
+    WHERE id = ${giftId} AND list_id = ${listId};
+  `;
+}
+
 export async function deleteGift(giftId: string, listId: string): Promise<void> {
   await sql`
     DELETE FROM gifts
